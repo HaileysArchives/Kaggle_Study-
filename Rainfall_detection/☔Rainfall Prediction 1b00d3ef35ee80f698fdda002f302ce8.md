@@ -56,7 +56,7 @@
 - 박스플롯을 사용해 잠재적 이상치를 식별하고 데이터 분포 평가
 - numerical_variables → winddirection, pressure, maxtemp, temparature, mintemp, dewpoint, humidity, cloud, sunshine, windspeed
 
-![image.png](image.png)
+![image.png](image/image.png)
 
 | **변수** | **분포 특성** | **이상치/특이점** |
 | --- | --- | --- |
@@ -74,7 +74,7 @@
     - 극좌표 그래프: 일반적인 직교 좌표계(x축, y축) 대신, 원점으로부터의 거리(r)와 각도(θ)를 사용하여 점의 위치를 나타내는 그래프
     - 풍향과 레이더 데이터 시각화에 적합
 
-![image.png](image/image.png)
+![image.png](image/image%201.png)
 
 → 비가 올 때: 중간 정도의 풍속이 주로 나타나며, 바람의 방향과 세기가 고르게 분포
 
@@ -82,7 +82,7 @@
 
 - 연간 변화 추이를 라인 플롯으로 시각화 → 'day' 변수 기반 특성 분석
 
-![image.png](image%202.png)
+![image.png](image/image%202.png)
 
 ### 2-2. 범주형 변수 분석 🔠
 
@@ -90,18 +90,18 @@
 - 파이 차이를 사용해 데이터셋 내 범주별 비율을 시각화
 - categorical_variables
 
-![image.png](image%203.png)
+![image.png](image/image%203.png)
 
 ### 2-3. 타겟 변수 분석 🎯
 
 - 타겟 변수(rainfall)는 이진 변수(비/비 없음)이므로 분포를 확인하여 클래스 불균형 이해
 - 막대 차트와 KDE 플롯을 사용해 다른 변수와의 관계 시각화
 
-![image.png](image%204.png)
+![image.png](image/image%204.png)
 
-![image.png](image%205.png)
+![image.png](image/image%205.png)
 
-![image.png](image%206.png)
+![image.png](image/image%206.png)
 
 ### **📝 주요 상관관계 분석**
 
@@ -167,7 +167,7 @@
 
 왜도가 0.75를 초과하는 수치형 특성에 로그 변환을 적용 
 
-![image.png](image%207.png)
+![image.png](image/image%207.png)
 
 → 테스트 데이터(windspeed)의 왜곡된 수치형 특성 로그 변환 및 분포 시각화
 
@@ -204,15 +204,15 @@
 
 📕 **참조 코드의 ROC Curve 결과** 
 
-![image.png](image%208.png)
+![image.png](image/image%208.png)
 
 📘 **CatBoost 모델로 변경했을 때의 ROC Curve 결과** 
 
-![image.png](image%209.png)
+![image.png](image/image%209.png)
 
 ### ✨ Feature Importance
 
-![image.png](image%2010.png)
+![image.png](image/image%2010.png)
 
 ## **6. 스태킹**
 
@@ -239,17 +239,17 @@
 
 **📕 참조한 코드의 AUC_Score 결과** 
 
-![image.png](image%2011.png)
+![image.png](image/image%2011.png)
 
 **📘 변경된 코드의 AUC_Score 결과**
 
-![image.png](image%2012.png)
+![image.png](image/image%2012.png)
 
 ### **4. 스태킹 앙상블 모델 구축 (2)**
 
 - 목표: 위 모델에 Random Forest를 포함한 스태킹 진행
 - 랜덤 포레스트 모델 파라미터: 동일하게 Optuna를 통해 하이퍼파라미터 사용
 
-![image.png](image%2013.png)
+![image.png](image/image%2013.png)
 
 📌 이외에도 `LogisticRegression`, `RandomForestClassifier`, `GradientBoostingClassifier` 와 같은 다양한 모델 조합을 추가적으로 진행해볼 수 있다
