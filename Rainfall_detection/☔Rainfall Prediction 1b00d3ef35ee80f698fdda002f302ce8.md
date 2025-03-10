@@ -74,7 +74,7 @@
     - 극좌표 그래프: 일반적인 직교 좌표계(x축, y축) 대신, 원점으로부터의 거리(r)와 각도(θ)를 사용하여 점의 위치를 나타내는 그래프
     - 풍향과 레이더 데이터 시각화에 적합
 
-![image.png](image%201.png)
+![image.png](image/image.png)
 
 → 비가 올 때: 중간 정도의 풍속이 주로 나타나며, 바람의 방향과 세기가 고르게 분포
 
@@ -250,6 +250,6 @@
 - 목표: 위 모델에 Random Forest를 포함한 스태킹 진행
 - 랜덤 포레스트 모델 파라미터: 동일하게 Optuna를 통해 하이퍼파라미터 사용
 
-![image\image.png](image%2013.png)
+![image.png](image%2013.png)
 
 📌 이외에도 `LogisticRegression`, `RandomForestClassifier`, `GradientBoostingClassifier` 와 같은 다양한 모델 조합을 추가적으로 진행해볼 수 있다
