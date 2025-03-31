@@ -1,255 +1,516 @@
-# ☔Rainfall Prediction
+# 🚀 G-Research Crypto Forecasting
 
-작성일시: 2025년 3월 8일 오후 11:46
+: 머신러닝 전문 지식을 활용하여 실제 암호화폐 시장 데이터 예측하기
 
-## **Binary Prediction with a Rainfall Dataset**
+### 📚 참고 자료
 
-**📂 2025 Kaggle Playground Series**
+<aside>
+💡
 
-## **📚 Reference Code**
+대회: https://www.kaggle.com/competitions/g-research-crypto-forecasting
 
-- **🌧️Rainfall Pred☔ | EDA📈 + Modelling | 🤖AI News!** [https://www.kaggle.com/code/tarundirector/rainfall-pred-eda-modelling-ai-news/notebook](https://www.kaggle.com/code/tarundirector/rainfall-pred-eda-modelling-ai-news/notebook)
-- **🌧️ Rainfall Prediction | 🏗️ Stacking**
+참고한 노트북: 
+
+https://www.kaggle.com/code/cstein06/tutorial-to-the-g-research-crypto-competition#Prediction-targets-and-evaluation
+
+https://www.kaggle.com/code/iamleonie/time-series-interpreting-acf-and-pacf
+
+</aside>
+
+### **📌 대회 정리**
+
+| 주제 | 14개 암호화폐의 단기 수익률 예측 |
+| --- | --- |
+| 주최 | G-Research, Cambridge Spark |
+| 총 상금 | 총 $120,000   
+1등 - $50,000 |
+| 문제 유형 | 회귀(Regression) / 시계열 예측(Time-Series Forecasting) |
+| 데이터 타입 |  |
+| 평가 지표 | 가중치가 적용된 피어슨 상관계수 (Weighted Pearson Correlation) |
+| 대회 시작 일시 | 2021년 11월 2일 |
+| 대회 종료 일시 | 2022년 5월 3일 (우승자 발표) |
+| 대회 참가 팀 | 약 1,946여  |
+
+# 1️⃣ 대회 개요
+
+매일 400억 달러 이상의 암호화폐가 거래되며, 이는 투자와 투기의 인기 있는 자산이다. 하지만 높은 변동성으로 인해 가격 예측이 매우 어려운 상황이다. 
+
+14개 암호화폐의 단기 수익률 예측 모델 개발이 목표
+
+### 🔑 주요 도전 과제
+
+- 수많은 거래자가 동시에 거래를 진행하기 때문에 대부분의 신호가 일시적 → 지속적이고 의미있는 신호를 찾는 것이 어려움
+- 과적합(Overfitting) 위험 → 지속적인 초과 수익(Alpha)를 찾기 어려움
+- 비정상성 데이터(Non-Stationary) → 시장 환경이 계속 변화(변동성) 고려
+
+### **⚒️ 데이터**
+
+- 2018년 이후 고빈도 시장 데이터 제공
+
+![image.png](image.png)
+
+### ⛑️ 주의 사항
+
+- Python 시계열 API를 사용해 모델이 시간을 앞지르지 않도록 해야 한다.
+
+```
+import gresearch_crypto
+env = gresearch_crypto.make_env()   # initialize the environment
+iter_test = env.iter_test()    # an iterator which loops over the test set and sample submission
+for (test_df, sample_prediction_df) in iter_test:
+    sample_prediction_df['Target'] = 0  # make your predictions here
+    env.predict(sample_prediction_df)   # register your predictions
+```
+
+→ 이 API는 테스트 데이터와 예측 데이터가 시간 순서대로 처리되도록 설계. 모델은 과거 및 현재 데이터를 기반으로만 학습하고 예측하며 평가 시점 이후의 데이터를 참조하지 못하도록 제한
+
+### 🧪 평가 방식
+
+- 제출된 모델은 실시간 암호화폐 데이터에 적용됨
+- 제출 마감 후 3개월 동안 수집된 실제 시장 데이터를 기반으로 모델의 예측 정확도(수익률 예측)가 평가됨
+
+📌 즉, 훈련/검증 데이터와는 별도로, 완전히 미래 데이터를 기반으로 모델의 실전 성능을 측정
+
+### 💡 평가 지표
+
+- 가중치가 적용된 피어슨 상관계수(Weighted Pearson Correlation)
+    - 피어슨 상관계수
+        
+         두 변수 간의 선형 관계를 측정하는 값 
+        
+        → +1에 가까우면 강한 양의 상관관계, -1에 가까우면 강한 음의 상관관계
+        
+
+### 📒 가중치된 피어슨 상관계수를 평가지표로 사용하는 이유
+
+- ~~암호화폐 시장의 특성상 변동성이 높고, 데이터의 중요도가 시점별로 다름~~
+- ~~거래량이 많은 시점의 데이터가 더 신뢰할 만한 정보를 포함할 가능성이 큼~~
+- ~~단순 평균보다 가중치를 반영하면 모델의 예측력을 더욱 정밀하게 평가 가능~~
+- 모든 암호화폐가 동일한 영향력을 갖지 않음
+- 데이터셋에서 암호화폐별 가중치(Weight)가 제공됨 → 주요 자산일수록 평가 시 더 높은 영향력을 가짐
+- 이를 위해 `asset_details.csv`에서 각 암호화폐별 가중치가 제공됨
+
+![image.png](image%201.png)
+
+# 2️⃣ 데이터 소개
+
+| **timestamp** | Unix 타임스탬프 (1970-01-01 00:00:00 UTC 이후 초 단위 경과 시간), 60초 단위 데이터 |
+| --- | --- |
+| **Asset_ID** | 암호화폐를 식별하는 ID (예: 1 = Bitcoin) |
+| **Count** | 해당 분(minute) 동안의 총 거래 횟수 |
+| **Open** | 해당 분의 시작(개장) 가격 (USD) |
+| **High** | 해당 분 동안의 최고 가격 (USD) |
+| **Low** | 해당 분 동안의 최저 가격 (USD) |
+| **Close** | 해당 분의 종료(종가) 가격 (USD) |
+| **Volume** | 해당 분 동안의 매수/매도된 자산 수량 (USD 기준)  |
+| **VWAP** | 거래량 가중 평균 가격 (Volumne Weighted Average Price) |
+| **Target** | 15분 후 예상 로그 수익률 (Residual log-returns)  |
+
+📌 추가 데이터: `asset_details.csv`파일에는 **Asset_ID**와 암호화폐 종류 매핑 정보 및 각 자산의 중요도를 나타내는 가중치(Weight)가 포함됨
+
+| Asset_ID | Weight | Asset_Name |
+| --- | --- | --- |
+| 0 | 4.304065 | Binance Coin |
+| 1 | 6.779922 | Bitcoin |
+| 2 | 2.397895 | Bitcoin Cash |
+| 3 | 4.406719 | Cardano |
+| 4 | 3.555348 | Dogecoin |
+| 5 | 1.386294 | EOS.IO |
+| 6 | 5.894403 | Ethereum |
+| 7 | 2.079442 | Ethereum Classic |
+| 8 | 1.098612 | IOTA |
+| 9 | 2.397895 | Litecoin |
+| 10 | 1.098612 | Maker |
+| 11 | 1.609438 | Monero |
+| 12 | 2.079442 | Stellar |
+| 13 | 1.791759 | TRON |
+
+# 3️⃣ 튜토리얼 요약
+
+## 1. 결측치 확인
+
+- Target 열에서 Null 값을 가진 행: 750,338개
+- 전체 데이터 행 수 대비 Null 값을 가진 행의 비율: 3.10%
+
+## 2. 자산별 데이터 분포 시각화
+
+![image.png](image%202.png)
+
+## **3. 캔들스틱 차트 (Candlestick Charts)** 📈
+
+- `Open`, `High`, `Low`, `Close` 데이터를 시각화하는 차트 형태로 주로 기술적 분석에 사용됨
+
+### 차트 구성 요소
+
+1. **바디(Body) → 시가(Open)와 종가(Close) 간 가격 범위**
+    - 초록색: 종가가 시가보다 높음 (가격 상승 = Bullish)
+    - 빨강색: 종가가 시가보다 낮음 (가격 하락 = Bearish)
+2. **윗꼬리와 아랫꼬리(Wicks)** 
+    - 해당 시간대 동안의 최고가(High)와 최저가(Low)를 보여줌
+    - 꼬리의 길이는 변동성을 나타냄
+
+![image.png](image%203.png)
+
+---
+
+## 4. 시계열 데이터 전처리 (Preprocessing)
+
+### 💡 시간 누락 데이터 확인
+
+- 암호화폐 데이터는 누락 시 NaN이 아니라, 아예 행 자체가 없음
+- `timestamp` 간의 차이를 계산하여 누락된 시간 구간 탐지
+
+`(eth.index[1:] - eth.index[:-1]).value_counts().head()`
+
+→ 일정한 간격(60초)이 아닌 다양한 가격이 존재함을 확인 
+
+### 🔄 시간 간격 보정
+
+- `.reindex()`와 `method=’pad’`를 사용해 누락된 시점의 값을 이전 값으로 채움
+- 인덱스를 60초 간격으로 강제 생성 → 균일한 시계열 데이터로 변환
+
+## 5. 자산 가격 시각화 및 상관관계 탐색
+
+### 💹 종가(Clost) 가격 시각
+
+- BTC와 ETH의 종가(Close)를 각각 시각화
     
-    [https://www.kaggle.com/code/mariusborel/rainfall-prediction-stacking](https://www.kaggle.com/code/mariusborel/rainfall-prediction-stacking)
+    → 시간에 따른 변동 추이를 직관적으로 비교 가능
+    
+- 또한, 특정 구간(예: 2021년 6월)만 필터링하여 비교 분석도 가능
+
+![image.png](image%204.png)
+
+📌 인사이트
+
+⇒ 두 자산은 비슷한 시점에 상승/하락하는 경향이 있으며, 잠재적 상관관계 존재 
+
+## 6. 로그 수익률 (Log Returns)
+
+- 일반 수익률 (Returns)
+    - 자산의 가격 변화를 분석하기 위해 가격 차이를 계산
+    - 하지만 자산마다 가격 규모가 다르기 때문에, 단순 가격 차이만으로는 비교가 어려워 이를 해결하기 위해 ‘가격의 백분율 변화(수익률, Returns)’를 계산
+
+### 🔍 왜 로그 수익률을 쓰는가?
+
+- 일반 수익률은 가격 크기에 따라 왜곡될 수 있음
+- 일반 수익률은 -100% 이하로 내려갈 수 없으나, 로그 수익률은 제한이 없다
+- 로그 수익률은 가격 비율의 로그로 계산되어 시간적으로 가산적이며, 비율 기반 비교에 적합
+- 🗒️로그 수익률 계산
+    - 두 연속적인 가격의 비율에 대해 로그 값을 취해 계산
+    - 첫 번째 값은 이전 데이터가 없기 때문에 로그 수익률이 비어 있게 되며, 이를 삭제
+
+### 📊 BTC와 ETH 로그 수익률 비교
+
+- 두 자산의 로그 수익률을 시각화
+- 대체로 유사한 흐름을 보이지만, 상관관계는 일정하지 않음
+
+![image.png](image%205.png)
+
+⇒ 상관관계가 시간에 따라 상승과 하락을 반복하는 흐름을 보인다. 이는 두 자산 간의 관계가 일정하지 않고 동적이라는 것을 의미한다. (비정상성(Non-stationary) 특징)
+
+📌 인사이트
+→ 두 자산이 항상 동시에 움직이지 않음 
+
+## 7. 타겟 변수 설정 (Returns Prediction)
+
+### 🎯 목표: 가까운 미래의 수익률 예측
+
+- 예측 타겟:
+    
+    ![image.png](image%206.png)
+    
+    `log(price t+16) / price(t+1)` → 미래 16분 후 가격과 미래 1분 후 가격의 로그 비율 
+    
+    - 이는 16분 후와 1분 후의 차이로 15분 간의 수익률을 나타냄
+
+### 📗 시장 신호 제거
+
+- 암호화폐는 전체 시장과 높은 상관성을 가짐
+- 개별 자산의 수익률 예측 능력을 평가하기 위해, 시장의 영향을 제거한 개별 자산의 순수 수익률을 타겟으로 설정
+
+## 8. 모델 구조 요약
+
+- 자산별로 단일 모델을 돌리는 것보다,
+    - 다중 출력 회귀 모델(Multi-output regression) 사용
+        
+        입력 데이터를 기반으로 여러 타켓 변수를 동시에 예측
+        
+- 하나의 입력으로 여러 자산의 수익률을 동시에 예측
+
+---
+
+https://www.kaggle.com/code/danofer/g-research-starter-0-361-lb
+
+## 1. 메모리 사용량 최적화
+
+: 데이터셋이 방대하기 때문에 메모리 사용량을 줄이기 위해 데이터 타입 최적화 
+
+### ⚙️ 각 컬럼을 순회하면서 타입을 줄일 수 있는지 확인
+
+- 정수형 컬럼 → `int8`, `int16`, `int32` 등 가능한 가장 작은 타입으로 반환
+- 실수형 컬럼 → `float16`, `float32` 등으로 변환
+- (문자열 컬럼은 처리하지 않음)
+
+## 2. 피처 생성
+
+| `upper_shadow` | 고가(High)와 종가/시가 중 큰 값의 차이 |
+| --- | --- |
+| `lower_shadow` | 종가/시가 중 작은 값과 저가(Low)의 차이 |
+| `high_div_low` | 고가 ÷ 저가 ⇒ 변동 비율 |
+| `open_sub_close` | 시가 - 종가 (차이) ⇒ 상승/하락 여부를 판단할 수 있는 지표 |
+| `hour` | 특정 데이터가 기록된 시간 |
+| `dayofweek` | 데이터가 기록된 요일 |
+| `day` | 데이터가 기록된 날짜 |
+
+## 3. 자산별 모델 학습
+
+### 3.1 자산별 데이터 처리
+
+- 자산 ID(Asset_ID)를 기준으로 데이터를 필터링하고 전처리
+- LightGBM 회귀 모델을 사용하여 자산별 예측 모델 학습
+
+### 3.2 학습 흐름
+
+- 자산별로 데이터를 처리하고, 모델 학습 결과를 저장
+
+<aside>
+🔑
+
+`for asset_id, asset_name in zip(df_asset_details['Asset_ID'], df_asset_details['Asset_Name']):
+X, y, model = get_Xy_and_model_for_asset(df_train, asset_id)
+models[asset_id] = model`
+
+</aside>
+
+![image.png](image%207.png)
+
+## 4. 테스트 및 예측
+
+![image.png](image%208.png)
+
+💡Asset_ID가 0인 데이터에 대해 학습된 모델을 호출하여 예측한 값→ 이 값은 Target 값으로, 약 0.000947%의 가격 변화율을 의미
+
+- 양수인 Target 값이므로 해당 암호화폐의 가격이 이전 시간 대비 미미하게 상승했음을 예측
+
+<aside>
+🔑
+
+```
+all_df_test = []
+
+env = gresearch_crypto.make_env()
+iter_test = env.iter_test()
+
+for i, (df_test, df_pred)in enumerate(iter_test):
+    for j , rowin df_test.iterrows():
+
+        model = models[row['Asset_ID']]
+        x_test = get_features(row)
+        y_pred = model.predict([x_test])[0]
+
+        df_pred.loc[df_pred['row_id'] == row['row_id'], 'Target'] = y_pred
+
+# Print just one sample row to get a feeling of what it looks likeif i == 0and j == 0:
+            display(x_test)
+
+# Display the first prediction dataframeif i == 0:
+        display(df_pred)
+    all_df_test.append(df_test)
+
+# Send submissionsenv.predict(df_pred)
+```
+
+</aside>
+
+→ 테스트 데이터를 순차적으로 처리하여 각 자산에 대해 학습된 모델로 예측 수행
+
+- 제출 템플릿에 예측 값을 기록하고 대회 환경에 제출
+
+---
+
+https://www.kaggle.com/code/code1110/gresearch-simple-lgb-starter#Feature-Engineering 📌
+
+## 1. 학습 및 검증을 위해 기간 분리 (시계열 분할)
+
+- 학습 기간: 2018년 1월 1일부터 2020년 9월 21일까지
+- 검증 기간: 2020년 9월 22일부터 2021년 9월 21일까지
+
+## 2. 파생 변수 생성
+
+| `open2close` | 종가(Close)와 시가(Open)에 비해 얼마나 변동했는지를 나타내는 비율 |
+| --- | --- |
+| `high2low` | 최고가(High)와 최저가(Low)의 비율로, 가격 변동성을 나타냄 |
+| `low2mean` | 최저가(Low)가 해당 시점 평균 가격(mean_price)에 비해 얼마나 낮은지 나타내는 비율 |
+| `high2median` | 최고가(High)가 중앙값(median_price)에 비해 얼마나 높은지 나타내는 비율 |
+| `low2median` | 최저가(Low)가 중앙값(median_price)에 비해 얼마나 낮은지 나타내는 비율 |
+| `volumn2coun` | 거래량(Volume)을 거래 횟수(Count)로 나눈 값으로, 거래당 평균 거래량을 의미 |
+
+## 3. 하이퍼파라미터 설정 및 피처 선택
+
+![image.png](image%209.png)
+
+## 4. 모델링 (LightGBM)
+
+- 각 암호화폐 자산(Asset_ID)에 대해 독립적으로 학습된 LightGBM 모델 생성
+
+### 4.1 개별 모델 학습 (14개 모델)
+
+- 암호화폐마다 가격 변동성과 특성이 달라, 개별적으로 모델을 학습
+
+### 4.2 통합 모델 학습 (1개 모델)
+
+- 통합된 데이터에서 공통 패턴을 학습하고, 모든 Asset_ID를 하나의 모델로 처리
+- 모든 자산에 대해 일관된 접근 방식 적용 가능
+
+---
+
+https://www.kaggle.com/code/iamleonie/time-series-interpreting-acf-and-pacf
+
+# 1️⃣ ACF (Autocorrelation Function, 자기상관 함수)
+
+: 이전 시점의 값과 현재 값 사이의 상관관계를 측정하는 함수
+
+- 시계열 데이터에서 몇 시점 전 데이터가 현재에 얼마나 영향을 주는지 파악
+- 시차(lag)를 점차 증가시키면서 계산
+- MA 차수를 설정 (MA 모델 식별)
+    
+    MA (Moving Average) 모델: 과거의 오차(잔차)를 이용해 현재 값을 예측하는 모델
     
 
-## 1. 데이터 소개
+# 2️⃣ PACF (Partial Autocorrelation Function, 부분 자기상관 함수)
 
-### 1-1. 데이터셋 형태 📂
+: 중간에 영향을 주는 시차를 배제하고 해당 시차에서의 직접적인 상관성을 측정하는 함수
 
-- 훈련 데이터: 2,190행 x 13열
-- 테스트 데이터: 730행 x 12열
-- 원본 데이터: 366행 x 12열
+- `lag=3`일 때, 중간 `lag=1,2`의 영향을 제거한 후, 직접적으로 lag=3이 현재에 얼마나 영향을 주는지 계산
+- AR 차수를 설정 (AR 모델 식별)
+    
+    AR (AutoRegressive) 모델: 이전 시점들의 값을 이용해 현재 값을 예측하는 모델
+    
 
-### 1-2. 결측치 분석 ❌
+# 3️⃣ ARMA 모델과 ARIMA 모델
 
-- 훈련 데이터셋: 결측치 없음
-- **테스트 데이터셋:** `winddirection` 피처에 1개의 결측치 존재
-    - 중앙값 대치를 통해 결측치 처리
+### 3.1 ARMA 모델
 
-### 1-3. 데이터 소개
+: AR 모델과 MA 모델을 결합한 모델
 
-다음은 데이터셋의 변수들을 표로 정리한 것입니다:
+- 데이터가 정상성, 즉 평균과 분산이 시간에 따라 일정하게 유지되는 경우 적합
 
-| **변수명** | **설명** | **범위/특성** |
-| --- | --- | --- |
-| ID | 레코드의 고유 식별자 | - |
-| Day | 연중 일수 | 1 ~ 365 |
-| Pressure | 기압 | 999 ~ 1034.6 hPa |
-| Temperature | 온도 (최대, 최소, 평균) | 최대: 10.4°C ~ 36.0°C최소: 4.0°C ~ 29.8°C |
-| Dew Point | 이슬점 | -0.3°C ~ 26.7°C |
-| Humidity | 습도 | 39% ~ 98% |
-| Cloud Cover | 구름량 | 2% ~ 100% |
-| Sunshine Duration | 일조 시간 | 0 ~ 12.1 시간 |
-| Wind Speed | 풍속 | 4.4 km/h ~ 59.5 km/h |
-| Wind Direction | 풍향 | 범주형 (35개 고유 값) |
-| Rainfall | 이진 타겟 변수 | 0 = 비 없음, 1 = 비 있음 |
-
-## 2. EDA
-
-목표: 탐색적 데이터 분석을 통해 데이터를 더 깊이 이해하고, 모델링에 필요한 정보 얻는 단계
-
-### 2-1. 수치형 변수 분석 📚
-
-- 히스토그램을 사용하여 각 변수의 분포 확인
-- 박스플롯을 사용해 잠재적 이상치를 식별하고 데이터 분포 평가
-- numerical_variables → winddirection, pressure, maxtemp, temparature, mintemp, dewpoint, humidity, cloud, sunshine, windspeed
-
-![image.png](image/image.png)
-
-| **변수** | **분포 특성** | **이상치/특이점** |
-| --- | --- | --- |
-| 기압 (pressure) 🌡️ | 정규 분포 | 1030 hPa 이상 (고기압) |
-| 최대 온도 (maxtemp) ☀️ | 좌편향, 이중봉 분포 | 10°C 이하 (추운 날) |
-| 평균 온도 (temperature) 🌡️ | 좌편향, 이중봉 분포 | 4°C ~ 7°C (추운 날) |
-| 최소 온도 (mintemp) ❄️ | 좌편향 | 4°C ~ 7°C (추운 밤) |
-| 이슬점 (dewpoint) 💧 | 좌편향, 20-25°C 집중 | 0°C ~ 5°C (건조) |
-| 습도 (humidity) 🌫️ | 좌편향, 70% 이상 집중 | 40-50% (건조) |
-| 구름량 (cloud) ☁️ | 좌편향, 80-100% 최고점 | 0-30% (맑은 날) |
-| 일조 시간 (sunshine) 🌞 | 우편향, 0에 가까운 값 다수 | 10-12시간 (맑은 날) |
-| 풍향 (winddirection) 🌬️ | 이중봉 분포 | 주요 패턴: ~50° 및 ~200° |
-| 풍속 (windspeed) 🍃 | 우편향, 30km/h 미만 집중 | 45km/h 이상 (폭풍/강풍) |
-- 극좌표 그래프를 통해 풍향과 풍속 특성 파악
-    - 극좌표 그래프: 일반적인 직교 좌표계(x축, y축) 대신, 원점으로부터의 거리(r)와 각도(θ)를 사용하여 점의 위치를 나타내는 그래프
-    - 풍향과 레이더 데이터 시각화에 적합
-
-![image.png](image/image%201.png)
-
-→ 비가 올 때: 중간 정도의 풍속이 주로 나타나며, 바람의 방향과 세기가 고르게 분포
-
-→ 비가 오지 않을 때: 바람의 방향과 세기가 불규칙하게 분포
-
-- 연간 변화 추이를 라인 플롯으로 시각화 → 'day' 변수 기반 특성 분석
+### 3.2 ARIMA 모델
 
-![image.png](image/image%202.png)
+: ARMA 모델에 적분(차분) 과정을 추가하여 비정상 데이터 처리 가능 
 
-### 2-2. 범주형 변수 분석 🔠
+# 4️⃣ 정상성 검정 (Stationarity Test)
 
-- 카운트플롯을 사용해 범주별 빈도를 분석하고 불균형 감지
-- 파이 차이를 사용해 데이터셋 내 범주별 비율을 시각화
-- categorical_variables
+- ADF 테스트(augmented Dickey-Fuller)를 사용해 데이터가 정상성을 가지는 지 확인
+    
+    ADF 테스트란? 시계열 데이터가 정상성을 갖는지 확인하는 통계적 방법
+    
+- `p-value`가 0.05 이하이면 정상성 만족, 그렇지 않으면 차분을 통해 정상화 필요
 
-![image.png](image/image%203.png)
+## 📚 ACF/PACF 분석을 통해 비정상 시계열을 차분 후 결과를 보여주는 그래프 (BTC)
 
-### 2-3. 타겟 변수 분석 🎯
+![image.png](image%2010.png)
 
-- 타겟 변수(rainfall)는 이진 변수(비/비 없음)이므로 분포를 확인하여 클래스 불균형 이해
-- 막대 차트와 KDE 플롯을 사용해 다른 변수와의 관계 시각화
-
-![image.png](image/image%204.png)
+- 그래프 축
+    - x축 (가로축): Lag(시차)  예) Lag=5 → 지금과 5분 전 값 사이의 관계
+    - y축 (세로축): 현재 값과 과거 값 사이의 상관관계
 
-![image.png](image/image%205.png)
+### 1) ACF on non-stationary (좌측 위)
 
-![image.png](image/image%206.png)
+- 파란 음영(신뢰구간)을 한참 벗어남 ⇒ 강한 자기상관 존재(비정상성)
 
-### **📝 주요 상관관계 분석**
+### 2) PACF on non-stationary (우측 위)
 
-| **변수 관계** | **상관계수** | **분석 내용** | **후속 조치** |
-| --- | --- | --- | --- |
-| 온도 관련 변수들
-(최대/평균/최소) | 0.97-0.99
-(강한 양의 상관관계) | 온도 관련 변수들 간 중복성이 매우 높음 | 특성 선택 또는 PCA를 통한 차원 축소 고려 |
-| 구름량과 습도 | 0.58
-(강한 양의 상관관계) | 구름량이 높을수록 습도가 증가하는 경향 | 스케일링 또는 변수 변환을 통한 모델 성능 개선 |
-| 구름량과 일조시간 | -0.81
-(강한 음의 상관관계) | 구름량이 많을수록 일조시간 감소 | 두 변수의 유사성을 고려한 특성 선택 |
-| 풍속과 구름량 | -0.18
-(약한 음의 상관관계) | 강한 바람이 구름 형성을 감소시킬 수 있음 | 바람-구름 상호작용에 대한 추가 특성 공학 |
-| 온도와 습도 | -0.025
-(매우 약한 음의 상관관계) | 습도는 온도 외 다른 요인들의 영향을 받음 | 다른 변수들과의 복합적 관계 분석 |
-| 풍향과 풍속 | -0.19
-(약한 음의 상관관계) | 특정 풍향에서 더 강하거나 약한 바람이 관측됨 | 풍향의 범주화를 통한 인사이트 도출 |
+- lag=1에서만 높은 값 → 이후 급격히 감소
+- 직접적인 의존은 lag=1까지만 존재, 하지만 전체적으로 여전히 비정상
 
-## 4. Feature Engineering
+### 3) ACF on differenced/stationary (좌측 아래)
 
-### **4-1. 파생 변수 생성**
+- lag=1 이후 대부분의 값이 0 근처에서 무작위로 분포
+- 파란 음영 안에 대부분 포함 → **랜덤 패턴**
+- 차분을 통해서 평균이 안정됨 → 정상성 확보
 
-| **파생 변수명** | **설명** | **유형** |
-| --- | --- | --- |
-| Temp_Diff | 최대 온도와 최소 온도 차이 | 수치형 |
-| Dew_Point_Spread | 온도와 이슬점 차이 | 수치형 |
-| Humidity_Category | 습도를 'Low', 'Medium', 'High'로 범주화 | 범주형 |
-| Cloud_Cover_Category | 구름량을 'Clear', 'Partly Cloudy', 'Overcast'로 범주화 | 범주형 |
-| Sunshine_Category | 일조 시간을 'Low', 'Medium', 'High'로 범주화 | 범주형 |
-| Wind_Speed_Intensity | 풍속을 'Calm', 'Breezy', 'Windy'로 범주화 | 범주형 |
-| Wind_Quadrant | 풍향을 'NE', 'SE', 'SW', 'NW' 4분면으로 범주화 | 범주형 |
-| Pressure_Humidity_Interaction | 기압과 습도의 곱 | 수치형 (상호작용 특성) |
-| Wind_Cloud_Interaction | 풍속과 구름량의 곱 | 수치형 (상호작용 특성) |
-| Temp_Ratio | 최대 온도 대비 현재 온도 비율 | 수치형 (정규화) |
-| month | 연간 월 (1~12) | 범주형 (순서형) |
-| temp_previous_day | 하루 전 온도 | 수치형 (시차 특성) |
-| humidity_previous_day | 하루 전 습도 | 수치형 (시차 특성) |
-| pressure_previous_day | 하루 전 기압 | 수치형 (시차 특성) |
-| Day_sin | 하루의 sin 값 (계절성 반영) | 수치형 (변환) |
-| Day_cos | 하루의 cos 값 (계절성 반영) | 수치형 (변환) |
-| Wind_U | 풍속의 동서 방향 벡터 성분 | 수치형 (벡터화) |
-| Wind_V | 풍속의 남북 방향 벡터 성분 | 수치형 (벡터화) |
+### 4) PACF on differenced/stationary (우측 아래)
 
-📌 노란색 변수들이 새롭게 생성된 파생 변수 목록 
+- lag=1만 유의미하게 높고, 이후는 모두 낮음
+- 현재 변화량은 직전 시점 변화량과만 관련 있음 → ARIMA 형태의 모델을 고려
+- 📌 핵심 포인트
+    
+    PACF는 ‘직접적인 상관관계’만을 보여주는 그래프로, PACF가 살짝살짝 왔다 갔다 하는 건 정상성이 깨진 게 아니다. 중요한 건 그 값이 신뢰구간(파란 띠) 밖에 있는가이다. 
+    
 
-1. 월 (month) 변수 생성
-    1. month 변수는 day 값을 12개의 구간으로 나누어 월별 정보를 나타냄
-    2. 데이터의 계절성 또는 월별 패턴을 모델에 반영하는 역할 
-2. 과거 데이터 활용 변수 생성
-    1. temp_previous_day, humidity_previous_day, pressure_previous_day 
-    2. 과거 데이터를 활용해 시간의 흐름에 따른 변화 반영
-3. 주기 함수 변환 (Day 변수)
-    1. Day_sin, Day_cos 변수는 day 변수를 날짜의 주기적인 특성을 학습하도록  삼각 함수(sin, cos)를 사용해 날짜를 원형으로 표현하는 것이 효과적 
-    2. **df[’Day_sin’] = np.sin(2 * np.pi * df[’day’] / 365)**
-    3. **df[’Day_cos’] = np.cos(2 * np.pi * df[’day’] / 365)**
-4. 풍향/풍속 벡터화
-    1. 풍향을 범주형으로 변환하는 것보다 모델이 바람의 방향과 세기를 더 효과적으로 학습할 수 있도록 도움 
-        - **Wind_U: 동-서 방향의 바람 (양수면 동쪽, 음수면 서쪽)**
-        - **Wind_V: 북-남 방향의 바람 (양수면 북쪽, 음수면 남쪽)**
+---
 
-### **4-2. 분포 변환**
+https://www.kaggle.com/code/junjitakeshima/crypto-beginner-s-try-for-simple-lgbm-en-jp
 
-왜도가 0.75를 초과하는 수치형 특성에 로그 변환을 적용 
+https://www.kaggle.com/code/julian3833/proposal-for-a-meaningful-lb-strict-lgbm?scriptVersionId=80421622
 
-![image.png](image/image%207.png)
+# **📚 제안**
 
-→ 테스트 데이터(windspeed)의 왜곡된 수치형 특성 로그 변환 및 분포 시각화
+- XGBoost/CatBoost 모델 사용
+- LSTM을 통해 시계열 데이터에서 ‘장기 의존성’ 학습 가능
 
-### 4-3. Feature Encoding
+# ⛑️ Q&A 및 피드백
 
-- 범주형 변수 원-핫 인코딩
-    - Cloud_Cover_Category, Humidity_Category, Sunshine_Category, Wind_Quadrant, Wind_Speed_Intensity
+# 📸 활동사진
 
-### **4-4. Feature Scaling**
+# 💡 추가 사항
 
-- **MinMaxScaler**
-- **StandardScaler**
+모든 자산의 로그 수익률을 포함시키는 과정은 다음 두 가지를 조합한 결과
 
-## **5. Modeling**
+1. 자산별 개별 처리: 각 자산 데이터를 필터링하고 로그 수익률을 계산
+2. 데이터 병합: 모든 자산의 결과를 `all_assets_2021` 데이터 프레임에 합치면서, 동일한 시간 축을 공유하게 정렬
 
-🔑 optuna를 활용한 XGBoost, CatBoost, LightGBM 모델 하이퍼파라미터 최적화 
+![image.png](image%2011.png)
 
-- 평가 방법: 5-Fold 교차 검증의 각 단계에서 모델 성능을 ROC AUC로 측정하고, 최종적으로 평균 ROC AUC를 계산
-- 결과 요약
+### 📌 질문
 
-| 모델  | 스케일링 | 평균 AUC | 표준편차 |
-| --- | --- | --- | --- |
-| CatBoost | MinMaxScaler | 0.882632 | 0.011941 |
-| CatBoost | StandardScaler | 0.882602 | 0.014613 |
-| LightGBM | MinMaxScaler | 0.882291 | 0.012140 |
-| XGBoost | MinMaxScaler | 0.881002 | 0.011872 |
-| XGBoost | StandardScaler | 0.880419 | 0.013256 |
-| LightGBM | StandardScaler | 0.876369 | 0.011354 |
+> 14개 암호화폐 각각의 단기 수익률 예측하는 것인가, 아니면 14개 자산을 통합하거나 앙상블하는 하나의 모델을 만드는 것인가?
+> 
+- `train.csv`에는 14개 암호화폐가 포함되어 있고, 각 행은
+    
+    `timestamp + Asset_ID` 조합으로 구성되어 있음
+    
+- 따라서 **하나의 데이터셋 안에 14개의 자산이 함께 포함된 구조**
 
-📂 주요 결과
+### 📂 결론
 
-- CatBoost 모델이 MinMaxScaler를 사용했을 때 가장 높은 AUC를 기록
-- 모든 모델이 비슷한 수준의 성능을 보였으며, 표준편차는 크지 않았음
+- 자산별 개별 모델을 따로 만들 수도 있고
+- 14개 자산을 동시에 예측하는 하나의 모델을 만들 수도 있다
 
-📕 **참조 코드의 ROC Curve 결과** 
+### ⛑️ 평가 방식 때문에 중요한 점
 
-![image.png](image/image%208.png)
+- 최종 점수는 자산별 weighted correlation 평균으로 계산됨
+- 즉, 모든 자산의 예측이 일정 수준 이상 좋아야 높은 점수를 받음
+    
+    → 한두 자산만 잘 맞춰도 전체 점수가 높아지지 않음!  
+    
 
-📘 **CatBoost 모델로 변경했을 때의 ROC Curve 결과** 
+ 
 
-![image.png](image/image%209.png)
+### 🔑 적분(차분) 과정을 추가하면 왜 비정상(Non-stationary) 데이터를 처리할 수 있는가?
 
-### ✨ Feature Importance
+- 시간이 지남에 따라 변화하는 데이터(비정상 데이터)이므로, 적분(Integration)과 차분(Differencing) 통해 데이터의 변화와 데이터가 평균과 분산이 일정한 상태(정상성, Stationary)로 변하도록 도움
+- 차분(Differencing): 시계열에서 바로 직전 값과의 차이를 구하는 것
+    - 값을 직접 예측하지 않고, ‘변화량’을 예측
+    - 원본 시계열: [100, 102, 105, 108, 112] → 1차 차분 결과: [-, 2, 3, 3, 4]
 
-![image.png](image/image%2010.png)
+### 💡 왜 정상성이 중요할까?
 
-## **6. 스태킹**
+→ 정상성을 확보하면, 모델이 미래를 더 정확하게 예측할 수 있기 때문이다. 
 
-### 1. 특성 선택
+- 정상성을 확보하면 생기는 효과
 
-- 목표: CatBoost 모델의 특성 중요도 분석 결과를 바탕으로 모델 성능에 중요한 특성만 선택
-- 방법: 중요도가 4 이상인 특성들을 선택하여 FeatureSelector 클래스를 통해 데이터 반환
-- 선택된 특성: `cloud`, `sunshine`, `Pressure_Humidity_Interaction`, `Day_sin`, `humidity`, `Wind_Cloud_Interaction`, `Wind_U`, `Dew_Point_Spread`, `humidity_previous_day`, `dewpoint`, `Day_cos`, `Temp_Diff`, `Cloud_Cover_Category_Overcast`, `mintemp`, `windspeed`
+| 효과 | 설명 |
+| --- | --- |
+| 모델 안정성 증가 | 값 대신 “변화량”을 예측 → 분산이 일정해져 예측이 쉬움 |
+| 예측 범위 제한 | 단기 수익률(변화량)은 대부분 -1% ~ +1% 안에 있음 |
+| 모델 해설력 ↑ | ACF/PACF를 통해 명확한 차수 판단 가능 (→ ARIMA 구조화) |
 
-### **2. 스태킹 앙상블 모델 구축 (1)**
+### ⛑️ 근데 왜 대부분의 사람들이 LightGBM 모델을 선호했는지?
 
-- 목표: CatBoost, LightGBM, XGBoost 모델을 결합하여 예측 성능 향상
-- 방법: StackingClassifier를 사용해 각 모델을 기본 모델로 구성하고, LightGBM을 최종 메타 모델로 사용
-    - XGBoost나 CatBoost에 비해 학습 속도가 빠르기 때문에 최종 메타 모델로 사용
-- 모델 파라미터: Optuna를 통해 하이퍼파라미터 사용
-- 데이터 스케일링: 모든 모델에 MinMaxScaler 적용
-
-### 3. 모델 학습 및 평가
-
-- 데이터 분할: 훈련 데이터를 학습 데이터와 검증 데이터로 분할 (8:2 비율)
-- 모델 학습: 스태킹 모델을 학습 데이터로 학습
-- 모델 예측: 검증 데이터로 예측 수행
-- 모델 평가: ROC-AUC 점수 및 분류 보고서(precision, recall, f1-score)를 통해 모델 성능 평가
-
-**📕 참조한 코드의 AUC_Score 결과** 
-
-![image.png](image/image%2011.png)
-
-**📘 변경된 코드의 AUC_Score 결과**
-
-![image.png](image/image%2012.png)
-
-### **4. 스태킹 앙상블 모델 구축 (2)**
-
-- 목표: 위 모델에 Random Forest를 포함한 스태킹 진행
-- 랜덤 포레스트 모델 파라미터: 동일하게 Optuna를 통해 하이퍼파라미터 사용
-
-![image.png](image/image%2013.png)
-
-📌 이외에도 `LogisticRegression`, `RandomForestClassifier`, `GradientBoostingClassifier` 와 같은 다양한 모델 조합을 추가적으로 진행해볼 수 있다
+- LightGBM 모델이 특히 시계열 데이터와 고차원 데이터를 다루는 데 강력한 성능 발휘
+- LightGBM의 강점
+    - 비선형성과 복잡한 데이터 처리 (Leaf-wise 방식)
+    - 불균형 데이터 처리
