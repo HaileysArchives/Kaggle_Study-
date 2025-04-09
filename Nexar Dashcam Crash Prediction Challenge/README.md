@@ -68,7 +68,7 @@ https://www.kaggle.com/code/sandiledesmondmfazi/nexar-dcp-challenge-baseline
 - 사고 시점(`time_of_event`)과 사고를 예측할 수 있었던 최초 시점(`time_of_alert`) 간의 간격
 - 테스트셋에서는 사고 발생 전 **500ms / 1000ms / 1500ms** 시점에서의 예측 성능을 평가
 
-### 2) 평가 절차 요약
+### 2) 평가 절차
 
 1. 각 TTA 구간별로 Precision-Recall (PR) 곡선을 작성
 2. PR 곡선을 바탕으로 Average Precision (AP) 값을 계산
@@ -302,6 +302,8 @@ https://www.kaggle.com/competitions/nexar-collision-prediction/discussion/564581
 
 : 이미지를 인식하거나 분석하는 데 특화된 딥러닝 모델 구조
 
+![image.png](image%201.png)
+
 - 이미지 위에 작은 필터(커널)를 이동시키며 패턴을 추출 (합성곱 연산)
 - 초반에는 선, 모서리 같은 단순한 특징 → 깊어질수록 형태, 구조까지 인식
 - 자율주행 영상에서는 차량의 형태, 움직임 등 시각적 특징 추출에 활용됨
@@ -327,7 +329,7 @@ https://www.kaggle.com/competitions/nexar-collision-prediction/discussion/564581
 </aside>
 
 - 기존 RNN의 한계점
-    - 장기 의존성 문제: 문장이 길어질수록 앞부분의 정보가 뒤쪽까지 잘 전달되지 못하는 문네
+    - 장기 의존성 문제: 문장이 길어질수록 앞부분의 정보가 뒤쪽까지 잘 전달되지 못하는 문
     - 병렬 처리의 어려움: 순차적인 처리 방식 때문에 GPU와 같은 병렬 컴퓨팅 자원을 효율적으로 활용하기 어려움
 
 ### 🧭 Self-Attention (자기 주의 메커니즘)
@@ -443,7 +445,7 @@ https://www.kaggle.com/competitions/nexar-collision-prediction/discussion/564581
 - 겹치는 수용 영역(Overlapping Receptive Fields): CNN의 특징 추출 과정에서 여러 개의 필터가 하나의 객체의 다양한 부분 감지 가능성
 - 앵커 박스(Anchor Boxes): 많은 객체 감지 모델은 미리 정의된 다양한 크기와 비율의 앵커 박스를 사용하여 객체의 위치를 예측한다. 하나의 객체에 대해 여러 개의 앵커 박스가 적합할 수 있다
 
-![image.png](image%201.png)
+![image.png](image%202.png)
 
 <aside>
 
@@ -475,3 +477,144 @@ https://ploradoaa.tistory.com/121
 - 강력한 데이터 증강 및 정규화로 모델의 강건성 강화
 - 혼합된 공간-시간 모델을 통해 보다 정교한 예측
 - 앙상블 기법을 통한 예측 성능 극대화
+
+---
+
+https://www.kaggle.com/code/fernandosr85/dashcam-collision-prediction-project
+
+# 1. Data Preprocessing
+
+> 원본 영상에서 충돌 위험 예측에 중요한 장면만 뽑아내고, 다양한 주행 상황을 시뮬레이션해서 모델이 다양한 상황에 견디도록 하는 데이터 가공 단계
+> 
+- 중요 프레임 추출 (Keyframe Extraction)
+- 광학적 흐름(Optical Flow) 계산 - 모션을 숫자로 표현하기
+    
+    > 자동차의 움직임을 픽셀 단위로 감지
+    > 
+    - 프레임 1과 프레임 2사이에서 어떤 물체가 어디로 이동했는지 측정
+    - 예를 들어, 차량이 오른쪽으로 10픽셀 이동했다면 → `(dx=10, dy=0)` 식으로 기록
+    - 해당 코드에서는 Farneback 알고리즘 사용 → 속도도 빠르고, 부드럽게 흐름을 계산할 수 있어 영상 처리에 적합
+- 주행 조건 시뮬레이션을 위한 데이터 증강
+- 병렬 처리 (Parallel Processing)
+    - 파이썬의 `multiprocessing.Pool`을 사용해 여러 개의 영상 프레임을 동시에 병렬 처리 → 전처리 속도 향상
+- 결측 프레임 처리
+
+# 2. Feature Engineering & Extraction
+
+> 충돌이 발생하기 직전의 특징(모양 + 움직임)을 잘 표현하고, 영상 간 시간 흐름이 잘 보존되도록 하는 데이터 가공 단계
+> 
+
+### 1) 적응적 프레임 샘플링
+
+- 충돌이 발생하는 후반부 프레임을 중심으로 더 많이 뽑음
+
+### 2) Farneback Optical Flow로 움직임 표현
+
+- 픽셀 간 움직임을 화살표(벡터)로 표현
+    
+    → 움직임이 심해지는 순간 = 사고 가능성 증가로 인식
+    
+
+### 3) 현실적인 증강 기법
+
+- 수평 뒤집기, 밝기 조정, 비, 안개 등을 적용해 모델이 다양한 날씨 및 조명 상황에서도 잘 예측하도록 학습
+
+### 4) 시간 정보 유지 변환 (Temporal Coherence)
+
+- 프레임을 증강할 때, 시간 순서가 흐트러지지 않도록 조심함
+
+### 5) NumPy → PyTorch 변환 최적화
+
+<aside>
+
+### 🔄 왜 NumPy에서 PyTorch로 변환해야 할까?
+
+- 대부분 영상 전처리/프레임 추출/광학 흐름 계산은 OpenCV + NumPy를 사용해서 처리 → 데이터는 NumPy 배열로 만들어졌지만, 모델은 PyTorch tensor를 원하기 때문
+- `torch.from_numpy()`
+
+### ⚒️ 배치 차원 유지
+
+- PyTorch 모델은 입력 데이터를 [B, C, H, W] 구조로 받기 때문에 NumPy에서도 이 구조로 맞춰줘야 모델이 정상 작동
+    - B: 배치 수
+    - C: 채널
+    - H: 높이
+    - W: 너비
+
+### 🔑 변환 방법
+
+1. NumPy로 영상 프레임/광학 흐름 등 처리
+2. `.astype(np.float32)`로 타입 맞추기 (`float64` → `float32`로 변환)
+3. `torch.from_numpy()`로 tensor 변환
+4. `.unsqueeze(0)`으로 배치 차원 추가 (필요시)
+5. `.to(device)`로 CPU에서 GPU로 전송 (필요시) 
+</aside>
+
+- 영상 데이터를 모델에 넣을 수 있게 변환할 때, 배치 단위와 시간 차원을 유지하면서 빠르게 변환
+
+# 3. 멀티 스트림 구조 (Multi-Stream Architecture)
+
+> 모양(정적 정보)과 움직임(동적 정보)을 따로따로 학습한 뒤, 결합해서 더 정확한 예측을 만드는 구조
+> 
+
+### 1) 시각 스트림 (Visual Stream)
+
+- MobileNetV2 기반 경량 CNN으로 프레임의 이미지 정보(차 모양, 배경 등)를 추출
+
+### 2) 광학 흐름 스트림 (Motion Stream)
+
+- Optical Flow를 입력으로 받아서 3D CNN을 통해 시간에 따른 움직임 변화를 학습
+- 3D CNN은 여러 프레임을 동시에 받아 시간적 변화까지 인식
+
+### 3) 시간 모델링 (LSTM)
+
+- 영상은 시간에 따라 변화하는 시퀀스 데이터이므로 LSTM으로 프레임 간의 흐름 (예: 정지 → 이동 → 충돌)을 학습
+
+### 4) 특징 결합 (Feature Fusion)
+
+- 시각 스트림과 모션 스트림의 출력 특징을 결합해 공간 + 시간 정보가 합쳐진 예측 생성
+
+### 5) 경량 구조 구현
+
+- 모바일 환경 또는 제한된 GPU에서도 학습 및 추론이 가능하도록 전체 구조를 최적화된 형태로 경량화
+
+# 4. 모델 최적화 (Model Optimization)
+
+- 비디오 배치 처리 시 메모리 최소화
+- GPU를 우선 사용하되, 자동으로 CPU fallback 처리
+- Gradient Clipping으로 학습이 폭주하지 않도록 안정화
+    
+    <aside>
+    
+    https://yhyun225.tistory.com/22
+    
+    https://velog.io/@lighthouse97/%EC%97%AD%EC%A0%84%ED%8C%8CBackpropagation-%EC%95%8C%EA%B3%A0%EB%A6%AC%EC%A6%98
+    
+    → 딥러닝에서 역전파(Back Propagation) 알고리즘을 사용할 때, 가중치를 업데이터 하기 위해 기울기를 계산하는데, 가끔 기울기 값이 너무 커져서 가중치가 한 번에 너무 크게 바뀌면 모델이 아예 폭주하게 된다. 
+    
+    ### ⚒️ Gradient Clipping이란?
+    
+    > 기울기(Gradient)가 일정 값 이상 커지면 잘라주는 것
+    > 
+    </aside>
+    
+- ReduceLROnPlateau 스케쥴러로 학습률 자동 조절
+    
+    <aside>
+    
+    ### ⛑️  ReduceLRoNPlateau (학습률 스케줄러)
+    
+    → 학습률은 딥러닝 학습에서 매우 중요한 하이퍼파라미터
+    
+    그런데 모델이 잘 학습되다가 어느 순간 성능 향상이 멈추는 Plateau(고원) 상태가 온다 → 학습률을 줄여 더 세밀하게 조정 
+    
+    </aside>
+    
+- Checkpoint 저장으로 가장 좋은 모델 자동 저장
+    - 수백~수천 epoch 동안, 그 중에서 가장 성능이 좋은 시점을 저장
+
+# 5. 커스텀 손실 함수 (Custom Loss Function)
+
+- 이진 분류(Binary Classification) + 시간 예측 회귀(Regression) 혼합
+- 늦게 사고를 예측할수록 패널티를 부여하는 구조
+- 충돌 예측 정확도뿐만 아니라, 얼마나 일찍 예측했는가도 중요하게 평가
+- 실제 안전 운전 시나리오를 고려해 설계된 손실 함수
